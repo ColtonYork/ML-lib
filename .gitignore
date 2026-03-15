@@ -2,3 +2,4 @@
 *.a
 mllib
 main.o
+data/

@@ -49,16 +49,18 @@ Tensor* SoftmaxCELoss::forward(Tensor* output, Tensor* target)
 
 Tensor* SoftmaxCELoss::backward(Tensor* output, Tensor* target)
 {
-    output->to_cpu();
     target->to_cpu();
 
-    int n = saved_output->num_elements();
-    int shape[] = {1, n};
+    int batch_size  = saved_output->shape[0];
+    int num_classes = saved_output->shape[1];
+
+    int shape[] = {batch_size, num_classes};
     Tensor* grad = new Tensor(shape, 2, false);
 
-    // fused gradient: softmax_output - target
-    for (int i = 0; i < n; i++)
-        grad->data[i] = saved_output->data[i] - target->data[i];
+    float scale = 1.0f / batch_size;
+    for (int i = 0; i < batch_size * num_classes; i++)
+        grad->data[i] = (saved_output->data[i] - target->data[i]) * scale;
 
+    grad->to_gpu();
     return grad;
 }

@@ -25,54 +25,37 @@
 #include <cstdio>
 #include <cstdlib>
 
-// XOR regression: Linear(2,8) -> ReLU -> Linear(8,1) -> MSELoss
-// Loss should drop from ~0.25 toward 0 over 1000 epochs
+#include "include/datasets/mnist.h"
+
+#include "include/datasets/mnist.h"
+#include <stdio.h>
 
 int main() {
-    srand(42);
+    // test 1: default load (all 60,000)
+    printf("=== Test 1: Full dataset ===\n");
+    MNISTLoader loader1(64);
+    printf("Training batches: %d (expected 937)\n", loader1.num_batches());
+    printf("Test batches: %d (expected 156)\n\n", loader1.num_test_batches());
 
-    float x_raw[] = { 0,0, 0,1, 1,0, 1,1 };
-    float t_raw[] = { 0, 1, 1, 0 };
+    // test 2: limited samples
+    printf("=== Test 2: 1000 samples ===\n");
+    MNISTLoader loader2(64, 1000);
+    printf("Training batches: %d (expected 15)\n", loader2.num_batches());
+    printf("Test batches: %d (expected 156)\n\n", loader2.num_test_batches());
 
-    int x_shape[] = {4, 2};
-    int t_shape[] = {4, 1};
+    // test 3: over 60000 gets capped
+    printf("=== Test 3: 99999 samples (should cap to 60000) ===\n");
+    MNISTLoader loader3(64, 99999);
+    printf("Training batches: %d (expected 937)\n", loader3.num_batches());
+    printf("Test batches: %d (expected 156)\n\n", loader3.num_test_batches());
 
-    Tensor* x = new Tensor(x_shape, 2, false);
-    Tensor* t = new Tensor(t_shape, 2, false);
-    for (int i = 0; i < 8; i++) x->data[i] = x_raw[i];
-    for (int i = 0; i < 4; i++) t->data[i] = t_raw[i];
+    // test 4: check tensor shapes are correct
+    printf("=== Test 4: Tensor shapes ===\n");
+    MNISTLoader loader4(64);
+    Tensor* img = loader4.get_image_batch(0);
+    Tensor* lbl = loader4.get_label_batch(0);
+    printf("Image batch shape: (%d, %d) (expected 64, 784)\n", img->shape[0], img->shape[1]);
+    printf("Label batch shape: (%d, %d) (expected 64, 10)\n", lbl->shape[0], lbl->shape[1]);
 
-    NeuralNetwork net;
-    net.add_layer(new Linear(2, 8, InitType::HE));
-    net.add_layer(new ReLU());
-    net.add_layer(new Linear(8, 1, InitType::HE));
-    net.set_loss(new MSELoss());
-
-    float lr;
-    net.learning_rate = lr = 0.05f;
-    int epochs = 1000;
-
-    printf("Training XOR  (Linear->ReLU->Linear  MSELoss)\n");
-    printf("lr=%.3f  epochs=%d\n\n", lr, epochs);
-
-    for (int e = 1; e <= epochs; e++) {
-        net.forwardPass(x, t);
-        net.backwardsPass();
-        net.update();
-        if (e % 100 == 0)
-            printf("epoch %4d | loss = %.6f\n", e, net.current_loss);
-    }
-
-    printf("\nFinal predictions vs targets:\n");
-    printf("  input      pred    target\n");
-    const char* inputs[4] = {"[0,0]","[0,1]","[1,0]","[1,1]"};
-
-    Tensor* out = net.forwardPass(x, t);
-    out->to_cpu();
-    for (int i = 0; i < 4; i++)
-        printf("  %-8s  %.4f   %.1f\n", inputs[i], out->data[i], t_raw[i]);
-
-    delete x;
-    delete t;
     return 0;
 }

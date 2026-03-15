@@ -4,10 +4,12 @@ NVCC = /usr/bin/nvcc
 CXXFLAGS = -Iinclude
 NVCCFLAGS = -Iinclude
 
-SRCS = src/tensor.cpp src/relu.cpp src/linear.cpp src/mse_loss.cpp src/softmax.cpp src/cross_entropy_loss.cpp src/softmax_ce_loss.cpp src/neural_network.cpp
+SRCS = src/tensor.cpp src/relu.cpp src/linear.cpp src/mse_loss.cpp src/softmax.cpp src/cross_entropy_loss.cpp src/softmax_ce_loss.cpp src/neural_network.cpp src/datasets/mnist.cpp
+
 CUDA_SRCS = src/cuda/cublas_ops.cu src/cuda/kernels.cu
 
-OBJS = src/tensor.o src/relu.o src/linear.o src/mse_loss.o src/softmax.o src/cross_entropy_loss.o src/softmax_ce_loss.o src/neural_network.o
+OBJS = src/tensor.o src/relu.o src/linear.o src/mse_loss.o src/softmax.o src/cross_entropy_loss.o src/softmax_ce_loss.o src/neural_network.o src/datasets/mnist.o
+
 CUDA_OBJS = src/cuda/cublas_ops.o src/cuda/kernels.o
 
 TARGET = mllib
@@ -15,7 +17,7 @@ TARGET = mllib
 all: $(TARGET)
 
 $(TARGET): main.o $(OBJS) $(CUDA_OBJS)
-	$(NVCC) -o $(TARGET) main.o $(OBJS) $(CUDA_OBJS) -lcublas
+	$(NVCC) -o $(TARGET) main.o $(OBJS) $(CUDA_OBJS) -lcublas -lcurl -lz
 
 main.o: main.cpp
 	$(CXX) $(CXXFLAGS) -c main.cpp -o main.o
@@ -44,6 +46,9 @@ src/softmax_ce_loss.o: src/softmax_ce_loss.cpp
 src/neural_network.o: src/neural_network.cpp
 	$(CXX) $(CXXFLAGS) -c src/neural_network.cpp -o src/neural_network.o
 
+src/datasets/mnist.o: src/datasets/mnist.cpp
+	$(CXX) $(CXXFLAGS) -c src/datasets/mnist.cpp -o src/datasets/mnist.o
+
 src/cuda/cublas_ops.o: src/cuda/cublas_ops.cu
 	$(NVCC) $(NVCCFLAGS) -c src/cuda/cublas_ops.cu -o src/cuda/cublas_ops.o
 
@@ -55,7 +60,10 @@ clean:
 
 install:
 	mkdir -p ~/mllib/include/cuda
+	mkdir -p ~/mllib/include/datasets
 	mkdir -p ~/mllib/lib
+	mkdir -p ~/mllib/data/mnist
 	cp include/*.h ~/mllib/include/
 	cp include/cuda/*.h ~/mllib/include/cuda/
+	cp include/datasets/*.h ~/mllib/include/datasets/
 	ar rcs ~/mllib/lib/libMLlib.a $(OBJS) $(CUDA_OBJS)
