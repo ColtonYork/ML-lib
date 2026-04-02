@@ -1,4 +1,4 @@
-#include "relu.h"
+#include "layers/relu.h"
 #include "cuda/kernels.h"
 
 
@@ -21,7 +21,7 @@ Tensor* ReLU::backward(Tensor* grad_output)
     Tensor* grad_input = new Tensor(saved_input->shape, saved_input->ndim, true);
 
     launch_relu_backward(grad_output->data, saved_input->data, grad_input->data, grad_output->num_elements());
-    
+
     return grad_input;
 }
 

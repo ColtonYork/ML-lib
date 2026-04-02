@@ -1,6 +1,6 @@
-#include "../include/linear.h"
-#include "../include/cuda/cublas_ops.h"
-#include "../include/cuda/kernels.h"
+#include "layers/linear.h"
+#include "cuda/cublas_ops.h"
+#include "cuda/kernels.h"
 #include <cstdlib>
 #include <cstdio>
 

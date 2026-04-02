@@ -2,7 +2,7 @@
 #define SOFTMAX_H
 
 #include "layer.h"
-#include "tensor.h"
+#include "../tensor.h"
 
 class Softmax : public Layer {
     Tensor* saved_output = nullptr;

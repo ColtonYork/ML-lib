@@ -3,8 +3,8 @@
 #define NEURAL_NETWORK_H
 
 #include <vector>
-#include "loss.h"
-#include "layer.h"
+#include "loss/loss.h"
+#include "layers/layer.h"
 #include "cuda/cublas_ops.h"
 
 class NeuralNetwork {

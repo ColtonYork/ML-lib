@@ -1,4 +1,4 @@
-#include "../include/softmax.h"
+#include "layers/softmax.h"
 #include <cmath>
 
 Tensor* Softmax::forward(Tensor* input)

@@ -1,4 +1,4 @@
-#include "../include/cross_entropy_loss.h"
+#include "loss/cross_entropy_loss.h"
 #include <cmath>
 
 Tensor* CrossEntropyLoss::forward(Tensor* output, Tensor* target)

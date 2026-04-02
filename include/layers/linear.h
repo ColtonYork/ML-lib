@@ -2,8 +2,8 @@
 #define LINEAR_H
 
 #include "layer.h"
-#include "tensor.h"
-#include "cuda/cublas_ops.h"
+#include "../tensor.h"
+#include "../cuda/cublas_ops.h"
 
 enum class InitType {
     HE,

@@ -4,8 +4,8 @@
 #ifndef LAYER_H
 #define LAYER_H
 
-#include "tensor.h"
-#include "cuda/cublas_ops.h"
+#include "../tensor.h"
+#include "../cuda/cublas_ops.h"
 
 class Layer {
 public:

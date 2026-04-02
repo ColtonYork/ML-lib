@@ -1,7 +1,7 @@
 #ifndef LOSS_H
 #define LOSS_H
 
-#include "tensor.h"
+#include "../tensor.h"
 
 class Loss {
 public:

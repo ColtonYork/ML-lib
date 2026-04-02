@@ -2,7 +2,7 @@
 #define RELU_H
 
 #include "layer.h"
-#include "tensor.h"
+#include "../tensor.h"
 
 class ReLU : public Layer {
     Tensor* saved_input = nullptr;

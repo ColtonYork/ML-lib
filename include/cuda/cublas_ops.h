@@ -3,7 +3,7 @@
 #define CUBLAS_OPS_H
 
 #include <cublas_v2.h>
-#include "tensor.h"
+#include <mllib/tensor.h>
 
 struct CublasContext {
     cublasHandle_t handle;

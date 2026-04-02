@@ -1,4 +1,4 @@
-#include "../include/softmax_ce_loss.h"
+#include "loss/softmax_ce_loss.h"
 #include <cmath>
 
 Tensor* SoftmaxCELoss::forward(Tensor* output, Tensor* target)
