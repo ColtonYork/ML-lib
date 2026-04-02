@@ -76,3 +76,7 @@ install:
 	cp include/loss/*.h /usr/local/include/mllib/loss/
 	cp include/optimizers/*.h /usr/local/include/mllib/optimizers/
 	ar rcs /usr/local/lib/libMLlib.a $(OBJS) $(CUDA_OBJS)
+
+uninstall:
+	rm -rf /usr/local/include/mllib                                                                                            
+	rm -f /usr/local/lib/libMLlib.a   
