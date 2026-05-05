@@ -6,13 +6,15 @@ NVCCFLAGS = -Iinclude
 
 SRCS = src/tensor.cpp src/neural_network.cpp src/datasets/mnist.cpp \
        src/layers/relu.cpp src/layers/linear.cpp src/layers/softmax.cpp \
-       src/loss/mse_loss.cpp src/loss/cross_entropy_loss.cpp src/loss/softmax_ce_loss.cpp
+       src/loss/mse_loss.cpp src/loss/cross_entropy_loss.cpp src/loss/softmax_ce_loss.cpp \
+       src/optimizers/sgd.cpp src/optimizers/momentum.cpp src/optimizers/adam.cpp
 
 CUDA_SRCS = src/cuda/cublas_ops.cu src/cuda/kernels.cu
 
 OBJS = src/tensor.o src/neural_network.o src/datasets/mnist.o \
        src/layers/relu.o src/layers/linear.o src/layers/softmax.o \
-       src/loss/mse_loss.o src/loss/cross_entropy_loss.o src/loss/softmax_ce_loss.o
+       src/loss/mse_loss.o src/loss/cross_entropy_loss.o src/loss/softmax_ce_loss.o \
+       src/optimizers/sgd.o src/optimizers/momentum.o src/optimizers/adam.o
 
 CUDA_OBJS = src/cuda/cublas_ops.o src/cuda/kernels.o
 
@@ -53,6 +55,15 @@ src/loss/cross_entropy_loss.o: src/loss/cross_entropy_loss.cpp
 src/loss/softmax_ce_loss.o: src/loss/softmax_ce_loss.cpp
 	$(CXX) $(CXXFLAGS) -c src/loss/softmax_ce_loss.cpp -o src/loss/softmax_ce_loss.o
 
+src/optimizers/sgd.o: src/optimizers/sgd.cpp
+	$(CXX) $(CXXFLAGS) -c src/optimizers/sgd.cpp -o src/optimizers/sgd.o
+
+src/optimizers/momentum.o: src/optimizers/momentum.cpp
+	$(CXX) $(CXXFLAGS) -c src/optimizers/momentum.cpp -o src/optimizers/momentum.o
+
+src/optimizers/adam.o: src/optimizers/adam.cpp
+	$(CXX) $(CXXFLAGS) -c src/optimizers/adam.cpp -o src/optimizers/adam.o
+
 src/cuda/cublas_ops.o: src/cuda/cublas_ops.cu
 	$(NVCC) $(NVCCFLAGS) -c src/cuda/cublas_ops.cu -o src/cuda/cublas_ops.o
 
@@ -78,5 +89,5 @@ install:
 	ar rcs /usr/local/lib/libMLlib.a $(OBJS) $(CUDA_OBJS)
 
 uninstall:
-	rm -rf /usr/local/include/mllib                                                                                            
-	rm -f /usr/local/lib/libMLlib.a   
+	rm -rf /usr/local/include/mllib
+	rm -f /usr/local/lib/libMLlib.a

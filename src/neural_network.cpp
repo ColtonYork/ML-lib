@@ -1,10 +1,20 @@
 #include "../include/neural_network.h"
+#include <cstdlib>
+#include <cstdio>
+
+
 
 void NeuralNetwork::add_layer(Layer* layer) 
 {
+    if (optimizer != nullptr) {
+        fprintf(stderr, "Error: cannot add layers after set_optimizer()\n");
+        std::abort();
+    }
+
     layer->set_cublas(cublas);
     layers.push_back(layer);
 }
+
     
 void NeuralNetwork::set_loss(Loss* loss)
 {
@@ -41,8 +51,7 @@ void NeuralNetwork::backwardsPass()
 
 void NeuralNetwork::update()
 {
-    for (int i = 0; i < layers.size(); i++) 
-        layers[i]->update_weights(learning_rate);
+    optimizer->step();
     cleanup();
 }
 
@@ -59,3 +68,10 @@ void NeuralNetwork::cleanup()
 
     saved_output = nullptr; 
 }
+
+void NeuralNetwork::set_optimizer(Optimizer* opt)
+{
+    delete optimizer;
+    optimizer = opt;
+}
+

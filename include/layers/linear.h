@@ -1,6 +1,7 @@
 #ifndef LINEAR_H
 #define LINEAR_H
 
+#include <vector>
 #include "layer.h"
 #include "../tensor.h"
 #include "../cuda/cublas_ops.h"
@@ -29,7 +30,10 @@ public:
     Tensor* forward(Tensor* input) override;
     Tensor* backward(Tensor* grad_output) override;
     void set_cublas(CublasContext& ctx) override;
-    void update_weights(float lr) override;
+    
+    std::vector<Tensor*> params() override { return {weights, bias}; }
+    std::vector<Tensor*> grads() override { return {grad_weights, grad_bias}; }
+
 
 };
 

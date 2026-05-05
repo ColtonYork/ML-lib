@@ -1,20 +1,37 @@
 #include "loss/softmax_ce_loss.h"
 #include <cmath>
+#include <cstring>
+#include <vector>
+#include <cuda_runtime.h>
+
+// helper: copy tensor data to a host buffer regardless of whether it lives on GPU or CPU.
+// does NOT mutate the source tensor's on_gpu state.
+static void copy_to_host(const Tensor* t, std::vector<float>& host)
+{
+    int total = t->shape[0] * t->shape[1];
+    host.resize(total);
+    if (t->on_gpu)
+        cudaMemcpy(host.data(), t->data, total * sizeof(float), cudaMemcpyDeviceToHost);
+    else
+        memcpy(host.data(), t->data, total * sizeof(float));
+}
 
 Tensor* SoftmaxCELoss::forward(Tensor* output, Tensor* target)
 {
-    output->to_cpu();
-    target->to_cpu();
-
     int batch_size  = output->shape[0];
     int num_classes = output->shape[1];
+
+    std::vector<float> out_host;
+    std::vector<float> tgt_host;
+    copy_to_host(output, out_host);
+    copy_to_host(target, tgt_host);
 
     int probs_shape[] = {batch_size, num_classes};
     Tensor* probs = new Tensor(probs_shape, 2, false);
 
     // softmax per sample
     for (int i = 0; i < batch_size; i++) {
-        float* row = &output->data[i * num_classes];
+        float* row = &out_host[i * num_classes];
 
         float max_val = row[0];
         for (int j = 1; j < num_classes; j++)
@@ -39,7 +56,7 @@ Tensor* SoftmaxCELoss::forward(Tensor* output, Tensor* target)
         for (int j = 0; j < num_classes; j++) {
             float p = probs->data[i * num_classes + j];
             if (p < 1e-7f) p = 1e-7f;
-            ce += target->data[i * num_classes + j] * logf(p);
+            ce += tgt_host[i * num_classes + j] * logf(p);
         }
     }
     loss->data[0] = -ce / batch_size;
@@ -49,18 +66,101 @@ Tensor* SoftmaxCELoss::forward(Tensor* output, Tensor* target)
 
 Tensor* SoftmaxCELoss::backward(Tensor* output, Tensor* target)
 {
-    target->to_cpu();
-
     int batch_size  = saved_output->shape[0];
     int num_classes = saved_output->shape[1];
+
+    std::vector<float> tgt_host;
+    copy_to_host(target, tgt_host);
 
     int shape[] = {batch_size, num_classes};
     Tensor* grad = new Tensor(shape, 2, false);
 
     float scale = 1.0f / batch_size;
     for (int i = 0; i < batch_size * num_classes; i++)
-        grad->data[i] = (saved_output->data[i] - target->data[i]) * scale;
+        grad->data[i] = (saved_output->data[i] - tgt_host[i]) * scale;
 
     grad->to_gpu();
     return grad;
 }
+
+
+
+
+
+
+
+
+
+
+
+// #include "loss/softmax_ce_loss.h"
+// #include <cmath>
+
+// Tensor* SoftmaxCELoss::forward(Tensor* output, Tensor* target)
+// {
+//     output->to_cpu();
+//     target->to_cpu();
+
+//     int batch_size  = output->shape[0];
+//     int num_classes = output->shape[1];
+
+//     int probs_shape[] = {batch_size, num_classes};
+//     Tensor* probs = new Tensor(probs_shape, 2, false);
+
+//     // softmax per sample
+//     for (int i = 0; i < batch_size; i++) {
+//         float* row = &output->data[i * num_classes];
+
+//         float max_val = row[0];
+//         for (int j = 1; j < num_classes; j++)
+//             if (row[j] > max_val) max_val = row[j];
+
+//         float sum = 0.0f;
+//         for (int j = 0; j < num_classes; j++) {
+//             probs->data[i * num_classes + j] = expf(row[j] - max_val);
+//             sum += probs->data[i * num_classes + j];
+//         }
+//         for (int j = 0; j < num_classes; j++)
+//             probs->data[i * num_classes + j] /= sum;
+//     }
+
+//     saved_output = probs;
+
+//     // cross entropy loss averaged over batch
+//     int loss_shape[] = {1, 1};
+//     Tensor* loss = new Tensor(loss_shape, 2, false);
+//     float ce = 0.0f;
+//     for (int i = 0; i < batch_size; i++) {
+//         for (int j = 0; j < num_classes; j++) {
+//             float p = probs->data[i * num_classes + j];
+//             if (p < 1e-7f) p = 1e-7f;
+//             ce += target->data[i * num_classes + j] * logf(p);
+//         }
+//     }
+//     loss->data[0] = -ce / batch_size;
+
+//     return loss;
+// }
+
+// Tensor* SoftmaxCELoss::backward(Tensor* output, Tensor* target)
+// {
+//     target->to_cpu();
+
+//     int batch_size  = saved_output->shape[0];
+//     int num_classes = saved_output->shape[1];
+
+//     int shape[] = {batch_size, num_classes};
+//     Tensor* grad = new Tensor(shape, 2, false);
+
+//     float scale = 1.0f / batch_size;
+//     for (int i = 0; i < batch_size * num_classes; i++)
+//         grad->data[i] = (saved_output->data[i] - target->data[i]) * scale;
+
+//     grad->to_gpu();
+//     return grad;
+// }
+
+
+
+
+
