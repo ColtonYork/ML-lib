@@ -9,7 +9,7 @@
 
 class NeuralNetwork {
     private:
-        std::vector<Layer*> layers;
+        std::vector<Layer*> layers = {};
         Loss* loss_fn = nullptr;
         Optimizer* optimizer = nullptr;
 
@@ -42,7 +42,7 @@ class NeuralNetwork {
                 delete optimizer;
             }
 
-
+        void print_network_configuration();
 
         float current_loss = -1.0f;
 };
