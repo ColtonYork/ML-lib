@@ -1,82 +1,82 @@
-CXX = g++
+CXX  = g++
 NVCC = /usr/bin/nvcc
 
-CXXFLAGS = -Iinclude
-NVCCFLAGS = -Iinclude
+CXXFLAGS  = -Iinclude -MMD -MP
+NVCCFLAGS = -Iinclude -MMD -MP
+LDLIBS    = -lcublas -lcurl -lz
 
-SRCS = src/tensor.cpp src/neural_network.cpp src/datasets/mnist.cpp \
-       src/layers/relu.cpp src/layers/linear.cpp src/layers/softmax.cpp \
-       src/loss/mse_loss.cpp src/loss/cross_entropy_loss.cpp src/loss/softmax_ce_loss.cpp
+BUILD = build
+LIB   = $(BUILD)/libMLlib.a
 
-CUDA_SRCS = src/cuda/cublas_ops.cu src/cuda/kernels.cu
+# ---------- library ----------
 
-OBJS = src/tensor.o src/neural_network.o src/datasets/mnist.o \
-       src/layers/relu.o src/layers/linear.o src/layers/softmax.o \
-       src/loss/mse_loss.o src/loss/cross_entropy_loss.o src/loss/softmax_ce_loss.o
+SRCS      = $(shell find src -name '*.cpp')
+CUDA_SRCS = $(shell find src -name '*.cu')
 
-CUDA_OBJS = src/cuda/cublas_ops.o src/cuda/kernels.o
+OBJS      = $(SRCS:%.cpp=$(BUILD)/%.o)
+CUDA_OBJS = $(CUDA_SRCS:%.cu=$(BUILD)/%.o)
 
-TARGET = mllib
+all: lib
 
-all: $(TARGET)
+lib: $(LIB)
 
-$(TARGET): main.o $(OBJS) $(CUDA_OBJS)
-	$(NVCC) -o $(TARGET) main.o $(OBJS) $(CUDA_OBJS) -lcublas -lcurl -lz
+$(LIB): $(OBJS) $(CUDA_OBJS)
+	ar rcs $@ $^
 
-main.o: main.cpp
-	$(CXX) $(CXXFLAGS) -c main.cpp -o main.o
+$(BUILD)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-src/tensor.o: src/tensor.cpp
-	$(CXX) $(CXXFLAGS) -c src/tensor.cpp -o src/tensor.o
+$(BUILD)/%.o: %.cu
+	@mkdir -p $(dir $@)
+	$(NVCC) $(NVCCFLAGS) -c $< -o $@
 
-src/neural_network.o: src/neural_network.cpp
-	$(CXX) $(CXXFLAGS) -c src/neural_network.cpp -o src/neural_network.o
+# ---------- examples ----------
+# each examples/<name>/main.cpp builds to build/<name>
 
-src/datasets/mnist.o: src/datasets/mnist.cpp
-	$(CXX) $(CXXFLAGS) -c src/datasets/mnist.cpp -o src/datasets/mnist.o
+EXAMPLES     = $(notdir $(patsubst %/,%,$(dir $(wildcard examples/*/main.cpp))))
+EXAMPLE_BINS = $(addprefix $(BUILD)/, $(EXAMPLES))
 
-src/layers/relu.o: src/layers/relu.cpp
-	$(CXX) $(CXXFLAGS) -c src/layers/relu.cpp -o src/layers/relu.o
+examples: $(EXAMPLE_BINS)
 
-src/layers/linear.o: src/layers/linear.cpp
-	$(CXX) $(CXXFLAGS) -c src/layers/linear.cpp -o src/layers/linear.o
+$(BUILD)/examples/%.o: examples/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -Iexamples/common -c $< -o $@
 
-src/layers/softmax.o: src/layers/softmax.cpp
-	$(CXX) $(CXXFLAGS) -c src/layers/softmax.cpp -o src/layers/softmax.o
+$(BUILD)/%: $(BUILD)/examples/%/main.o $(LIB)
+	$(NVCC) -o $@ $< $(LIB) $(LDLIBS)
 
-src/loss/mse_loss.o: src/loss/mse_loss.cpp
-	$(CXX) $(CXXFLAGS) -c src/loss/mse_loss.cpp -o src/loss/mse_loss.o
+# make run-function_fit, make run-mnist, ...
+run-%: $(BUILD)/%
+	./$<
 
-src/loss/cross_entropy_loss.o: src/loss/cross_entropy_loss.cpp
-	$(CXX) $(CXXFLAGS) -c src/loss/cross_entropy_loss.cpp -o src/loss/cross_entropy_loss.o
+# ---------- tests ----------
+# each tests/test_*.cpp builds to build/tests/test_*; make test runs them all
 
-src/loss/softmax_ce_loss.o: src/loss/softmax_ce_loss.cpp
-	$(CXX) $(CXXFLAGS) -c src/loss/softmax_ce_loss.cpp -o src/loss/softmax_ce_loss.o
+TESTS     = $(basename $(notdir $(wildcard tests/test_*.cpp)))
+TEST_BINS = $(addprefix $(BUILD)/tests/, $(TESTS))
 
-src/cuda/cublas_ops.o: src/cuda/cublas_ops.cu
-	$(NVCC) $(NVCCFLAGS) -c src/cuda/cublas_ops.cu -o src/cuda/cublas_ops.o
+test: $(TEST_BINS)
+	@for t in $(TEST_BINS); do echo "== $$t"; ./$$t || exit 1; done
 
-src/cuda/kernels.o: src/cuda/kernels.cu
-	$(NVCC) $(NVCCFLAGS) -c src/cuda/kernels.cu -o src/cuda/kernels.o
+$(BUILD)/tests/%: $(BUILD)/tests/%.o $(LIB)
+	$(NVCC) -o $@ $< $(LIB) $(LDLIBS)
 
-clean:
-	rm -f main.o $(OBJS) $(CUDA_OBJS) $(TARGET)
+# ---------- install ----------
 
-install:
-	mkdir -p /usr/local/include/mllib/cuda
-	mkdir -p /usr/local/include/mllib/datasets
-	mkdir -p /usr/local/include/mllib/layers
-	mkdir -p /usr/local/include/mllib/loss
-	mkdir -p /usr/local/include/mllib/optimizers
-	mkdir -p /usr/local/lib
-	cp include/*.h /usr/local/include/mllib/
-	cp include/cuda/*.h /usr/local/include/mllib/cuda/
-	cp include/datasets/*.h /usr/local/include/mllib/datasets/
-	cp include/layers/*.h /usr/local/include/mllib/layers/
-	cp include/loss/*.h /usr/local/include/mllib/loss/
-	cp include/optimizers/*.h /usr/local/include/mllib/optimizers/
-	ar rcs /usr/local/lib/libMLlib.a $(OBJS) $(CUDA_OBJS)
+install: $(LIB)
+	mkdir -p /usr/local/include/mllib /usr/local/lib
+	cp -r include/. /usr/local/include/mllib/
+	cp $(LIB) /usr/local/lib/libMLlib.a
 
 uninstall:
-	rm -rf /usr/local/include/mllib                                                                                            
-	rm -f /usr/local/lib/libMLlib.a   
+	rm -rf /usr/local/include/mllib
+	rm -f /usr/local/lib/libMLlib.a
+
+clean:
+	rm -rf $(BUILD)
+
+.PHONY: all lib examples test install uninstall clean
+.SECONDARY: $(EXAMPLES:%=$(BUILD)/examples/%/main.o) $(TEST_BINS:%=%.o)
+
+-include $(shell find $(BUILD) -name '*.d' 2>/dev/null)

@@ -67,13 +67,6 @@ Tensor* Linear::backward(Tensor* grad_output)
     return grad_input;
 }
 
-void Linear::update_weights(float lr)
-{
-    if (grad_weights == nullptr) return;
-
-    launch_sgd_update(weights->data, grad_weights->data, lr, weights->num_elements());
-    launch_sgd_update(bias->data,    grad_bias->data,    lr, bias->num_elements());
-}
 
 void Linear::set_cublas(CublasContext& ctx)
 {

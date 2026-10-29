@@ -1,5 +1,5 @@
-#include "../include/tensor.h"
-#include <cuda_runtime.h>
+#include "tensor.h"
+#include "cuda/check.h"
 #include <cstdio>
 void print_recursive(float* data, int* shape, int ndim, int dim, int offset, int indent);
 
@@ -10,7 +10,7 @@ Tensor::Tensor(int* shape, int ndim, bool on_gpu) : on_gpu(on_gpu), ndim(ndim)
         this->shape[i] = shape[i];
 
     if (on_gpu)
-        cudaMalloc(&data, num_elements() * sizeof(float));
+        CUDA_CHECK(cudaMalloc(&data, num_elements() * sizeof(float)));
     else
         data = new float[num_elements()]();
 }
@@ -18,7 +18,7 @@ Tensor::Tensor(int* shape, int ndim, bool on_gpu) : on_gpu(on_gpu), ndim(ndim)
 Tensor::~Tensor()
 {
     if (on_gpu)
-        cudaFree(data);
+        CUDA_CHECK(cudaFree(data));
     else
         delete[] data;
 
@@ -70,7 +70,7 @@ void Tensor::print()
     if (on_gpu)
     {
         cpu_data = new float[num_elements()];
-        cudaMemcpy(cpu_data, data, num_elements() * sizeof(float), cudaMemcpyDeviceToHost);
+        CUDA_CHECK(cudaMemcpy(cpu_data, data, num_elements() * sizeof(float), cudaMemcpyDeviceToHost));
     }
     else
         cpu_data = data;
@@ -90,8 +90,8 @@ void Tensor::to_gpu()
     float* gpu_data;
 
     // allocate and copy data onto gpu
-    cudaMalloc(&gpu_data, num_elements() * sizeof(float));
-    cudaMemcpy(gpu_data, data, num_elements() * sizeof(float), cudaMemcpyHostToDevice);
+    CUDA_CHECK(cudaMalloc(&gpu_data, num_elements() * sizeof(float)));
+    CUDA_CHECK(cudaMemcpy(gpu_data, data, num_elements() * sizeof(float), cudaMemcpyHostToDevice));
 
     delete[] data;
     data = gpu_data;
@@ -103,11 +103,11 @@ void Tensor::to_cpu()
 {
     if (!on_gpu) return;
 
-    cudaDeviceSynchronize();
+    CUDA_CHECK(cudaDeviceSynchronize());
     float* cpu_data = new float[num_elements()];
-    cudaMemcpy(cpu_data, data, num_elements() * sizeof(float), cudaMemcpyDeviceToHost);
+    CUDA_CHECK(cudaMemcpy(cpu_data, data, num_elements() * sizeof(float), cudaMemcpyDeviceToHost));
 
-    cudaFree(data);
+    CUDA_CHECK(cudaFree(data));
     data = cpu_data;
     on_gpu = false;
 }

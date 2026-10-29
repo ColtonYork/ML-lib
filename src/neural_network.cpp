@@ -1,10 +1,23 @@
 #include "../include/neural_network.h"
+#include "../include/layers/linear.h"
+#include "../include/layers/relu.h"
+#include "../include/layers/softmax.h"
+#include <cstdlib>
+#include <cstdio>
+
+
 
 void NeuralNetwork::add_layer(Layer* layer) 
 {
+    if (optimizer != nullptr) {
+        fprintf(stderr, "Error: cannot add layers after set_optimizer()\n");
+        std::abort();
+    }
+
     layer->set_cublas(cublas);
     layers.push_back(layer);
 }
+
     
 void NeuralNetwork::set_loss(Loss* loss)
 {
@@ -41,8 +54,7 @@ void NeuralNetwork::backwardsPass()
 
 void NeuralNetwork::update()
 {
-    for (int i = 0; i < layers.size(); i++) 
-        layers[i]->update_weights(learning_rate);
+    optimizer->step();
     cleanup();
 }
 
@@ -59,3 +71,62 @@ void NeuralNetwork::cleanup()
 
     saved_output = nullptr; 
 }
+
+void NeuralNetwork::set_optimizer(Optimizer* opt)
+{
+    delete optimizer;
+    optimizer = opt;
+}
+
+void NeuralNetwork::print_network_configuration()
+{
+    printf("Neural Network Configuration\n");
+    printf("----------------------------\n");
+    printf("Layers: %zu\n\n", layers.size());
+
+    for (size_t i = 0; i < layers.size(); i++) {
+        if (Linear* lin = dynamic_cast<Linear*>(layers[i])) {
+            printf("  [%2zu]  Linear   %4d -> %-4d\n",
+                   i, lin->weights->shape[0], lin->weights->shape[1]);
+        } else if (dynamic_cast<ReLU*>(layers[i])) {
+            printf("  [%2zu]  ReLU\n", i);
+        } else if (dynamic_cast<Softmax*>(layers[i])) {
+            printf("  [%2zu]  Softmax\n", i);
+        } else {
+            printf("  [%2zu]  (unknown)\n", i);
+        }
+    }
+
+    printf("\nArchitecture: ");
+    bool first = true;
+    for (size_t i = 0; i < layers.size(); i++) {
+        Linear* lin = dynamic_cast<Linear*>(layers[i]);
+        if (!lin) continue;
+        if (first) { printf("%d", lin->weights->shape[0]); first = false; }
+        printf(" -> %d", lin->weights->shape[1]);
+    }
+    printf("\n");
+}
+
+Tensor* NeuralNetwork::infer(Tensor* input)
+{
+    std::vector<Tensor*> temps;
+    Tensor* current = input;
+
+    for (int i = 0; i < layers.size(); i++) {
+        current = layers[i]->forward(current);
+        temps.push_back(current);
+    }
+
+    current->to_cpu();
+
+    int* shape = current->shape;
+    Tensor* output = new Tensor(shape, current->ndim, false);
+    for (int i = 0; i < current->num_elements(); i++)
+        output->data[i] = current->data[i];
+
+    for (Tensor* t : temps) delete t;
+
+    return output;
+}
+

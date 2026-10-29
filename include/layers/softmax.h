@@ -6,6 +6,8 @@
 
 class Softmax : public Layer {
     Tensor* saved_output = nullptr;
+    void free_gradients() override;
+
 public:
     Tensor* forward(Tensor* input) override;
     Tensor* backward(Tensor* grad_output) override;

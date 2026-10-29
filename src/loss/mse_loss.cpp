@@ -1,37 +1,25 @@
 #include "loss/mse_loss.h"
-#include <cmath>
+#include "cuda/kernels.h"
 
 Tensor* MSELoss::forward(Tensor* output, Tensor* target)
 {
-    output->to_cpu();
-    target->to_cpu();
+    if (!output->on_gpu) output->to_gpu();
+    if (!target->on_gpu) target->to_gpu();
 
-    int n = output->num_elements();
     int shape[] = {1, 1};
-    Tensor* loss = new Tensor(shape, 2, false);
-
-    float sum = 0.0f;
-    for (int i = 0; i < n; i++) {
-        float diff = output->data[i] - target->data[i];
-        sum += diff * diff;
-    }
-    loss->data[0] = sum / n;
+    Tensor* loss = new Tensor(shape, 2, true);
+    launch_mse_loss(output->data, target->data, loss->data, output->num_elements());
 
     return loss;
 }
 
 Tensor* MSELoss::backward(Tensor* output, Tensor* target)
 {
-    output->to_cpu();
-    target->to_cpu();
+    if (!output->on_gpu) output->to_gpu();
+    if (!target->on_gpu) target->to_gpu();
 
-    int n = output->num_elements();
-
-    // match the shape of output exactly, not [1, n]
-    Tensor* grad = new Tensor(output->shape, output->ndim, false);
-
-    for (int i = 0; i < n; i++)
-        grad->data[i] = (2.0f * (output->data[i] - target->data[i])) / n;
+    Tensor* grad = new Tensor(output->shape, output->ndim, true);
+    launch_mse_backward(output->data, target->data, grad->data, output->num_elements());
 
     return grad;
 }

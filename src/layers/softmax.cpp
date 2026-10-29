@@ -1,50 +1,35 @@
 #include "layers/softmax.h"
-#include <cmath>
+#include "cuda/kernels.h"
 
+// softmax over the last dimension, independently for each row
 Tensor* Softmax::forward(Tensor* input)
 {
-    input->to_cpu();
+    if (!input->on_gpu) input->to_gpu();
 
-    int n = input->num_elements();
-    int shape[] = {input->shape[0], input->shape[1]};
-    Tensor* output = new Tensor(shape, 2, false);
+    int cols = input->shape[input->ndim - 1];
+    int rows = input->num_elements() / cols;
 
-    // find max for numerical stability
-    float max_val = input->data[0];
-    for (int i = 1; i < n; i++)
-        if (input->data[i] > max_val)
-            max_val = input->data[i];
+    Tensor* output = new Tensor(input->shape, input->ndim, true);
+    launch_softmax_rows(input->data, output->data, rows, cols);
 
-    // e^x for each element
-    float sum = 0.0f;
-    for (int i = 0; i < n; i++) {
-        output->data[i] = expf(input->data[i] - max_val);
-        sum += output->data[i];
-    }
-
-    // divide by sum
-    for (int i = 0; i < n; i++)
-        output->data[i] /= sum;
-
-    saved_output = output;
+    saved_output = output;  // owned by the network's intermediates, not by this layer
     return output;
 }
 
 Tensor* Softmax::backward(Tensor* grad_output)
 {
-    grad_output->to_cpu();
+    if (!grad_output->on_gpu) grad_output->to_gpu();
 
-    int n = saved_output->num_elements();
-    int shape[] = {saved_output->shape[0], saved_output->shape[1]};
-    Tensor* grad_input = new Tensor(shape, 2, false);
+    int cols = saved_output->shape[saved_output->ndim - 1];
+    int rows = saved_output->num_elements() / cols;
 
-    // dL/dx[i] = s[i] * (grad[i] - sum(grad[j] * s[j]))
-    float dot = 0.0f;
-    for (int i = 0; i < n; i++)
-        dot += grad_output->data[i] * saved_output->data[i];
-
-    for (int i = 0; i < n; i++)
-        grad_input->data[i] = saved_output->data[i] * (grad_output->data[i] - dot);
+    Tensor* grad_input = new Tensor(saved_output->shape, saved_output->ndim, true);
+    launch_softmax_rows_backward(grad_output->data, saved_output->data, grad_input->data, rows, cols);
 
     return grad_input;
+}
+
+void Softmax::free_gradients()
+{
+    saved_output = nullptr;
 }
