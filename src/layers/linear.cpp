@@ -26,6 +26,13 @@ Linear::Linear(int in_features, int out_features, InitType init)
     bias->to_gpu();
 }
 
+Linear::~Linear()
+{
+    free_gradients();  // in case it's destroyed mid-step with gradients still allocated
+    delete weights;
+    delete bias;
+}
+
 Tensor* Linear::forward(Tensor* input)
 {
     if (!input->on_gpu) input->to_gpu();

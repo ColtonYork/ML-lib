@@ -27,6 +27,7 @@ public:
     Tensor* grad_bias = nullptr;
 
     Linear(int in_features, int out_features, InitType init = InitType::HE);
+    ~Linear() override;
     Tensor* forward(Tensor* input) override;
     Tensor* backward(Tensor* grad_output) override;
     void set_cublas(CublasContext& ctx) override;
