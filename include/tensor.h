@@ -12,6 +12,11 @@ public:
     Tensor(int* shape, int ndim, bool on_gpu = false);
     ~Tensor();
 
+    // a copy would share data/shape and both destructors would free them, so copying is disabled.
+    // pass Tensor* around instead.
+    Tensor(const Tensor&) = delete;
+    Tensor& operator=(const Tensor&) = delete;
+
     int num_elements();   // returns total count of numbers (e.g. 3*4 = 12)
     void print();
     void print_shape();

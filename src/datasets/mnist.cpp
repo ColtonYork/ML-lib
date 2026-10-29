@@ -1,4 +1,4 @@
-#include "../../include/datasets/mnist.h"
+#include "datasets/mnist.h"
 #include <string>
 #include <vector>
 #include <fstream>

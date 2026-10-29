@@ -44,6 +44,9 @@ class NeuralNetwork {
 
         void print_network_configuration();
 
+        Tensor* infer(Tensor* input);
+
+
         float current_loss = -1.0f;
 };
 #endif

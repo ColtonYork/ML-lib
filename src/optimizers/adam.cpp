@@ -1,5 +1,5 @@
 #include "optimizers/adam.h"
-#include "../../include/cuda/kernels.h"
+#include "cuda/kernels.h"
 #include <cmath>
 
 Adam::Adam(std::vector<Layer*>* layers, float lr, float beta1, float beta2, float eps)

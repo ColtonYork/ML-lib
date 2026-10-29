@@ -1,7 +1,7 @@
-#include "include/neural_network.h"
-#include "include/layers/linear.h"
-#include "include/layers/relu.h"
-#include "include/layers/softmax.h"
+#include "../include/neural_network.h"
+#include "../include/layers/linear.h"
+#include "../include/layers/relu.h"
+#include "../include/layers/softmax.h"
 #include <cstdlib>
 #include <cstdio>
 
@@ -106,5 +106,27 @@ void NeuralNetwork::print_network_configuration()
         printf(" -> %d", lin->weights->shape[1]);
     }
     printf("\n");
+}
+
+Tensor* NeuralNetwork::infer(Tensor* input)
+{
+    std::vector<Tensor*> temps;
+    Tensor* current = input;
+
+    for (int i = 0; i < layers.size(); i++) {
+        current = layers[i]->forward(current);
+        temps.push_back(current);
+    }
+
+    current->to_cpu();
+
+    int* shape = current->shape;
+    Tensor* output = new Tensor(shape, current->ndim, false);
+    for (int i = 0; i < current->num_elements(); i++)
+        output->data[i] = current->data[i];
+
+    for (Tensor* t : temps) delete t;
+
+    return output;
 }
 
